@@ -155,28 +155,28 @@ export default function App() {
       {/* About Tab */}
       {tab === "about" && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-2xl shadow dark:bg-gray-800">
-          <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+          <h2 className="text-2xl font-bold mb-4">
             About Voices of Innovation
           </h2>
           <p className="text-gray-700 dark:text-gray-200 mb-4">
             Voices of Innovation is a youth-led media platform that amplifies young, bold, African-led solutions from changemakers and innovators focusing on the world’s most pressing issues, from climate change, social inequality to education and grassroots innovation. Through the podcast episodes and interviews, we spotlight changemakers and innovators, especially young people who are creating impact in unexpected places, often with limited resources but powerful ideas.
           </p>
 
-          <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+          <h3 className="text-xl font-semibold mb-2">
             Our Mission
           </h3>
           <p className="text-gray-700 dark:text-gray-200 mb-4">
             Our aim is to build a community of listeners, thinkers, and doers who believe that innovation isn’t just about technology, it’s also about courage, culture, creativity, and passion to make an impact. We believe storytelling is a form of social change and does not only connect, it inspires, and empowers.
           </p>
 
-          <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+          <h3 className="text-xl font-semibold mb-2">
             Our Vision
           </h3>
           <p className="text-gray-700 dark:text-gray-200 mb-4">
             By focusing on solutions aligned with the Sustainable Development Goals particularly SDG 13 (Climate Action), SDG 9 (Innovation), SDG 4 (Education), and SDG 10 (Reduced Inequalities), Voices of Innovation helps bridge the gap between youth-led action and global conversations and policy-making decisions.
           </p>
 
-          <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+          <h3 className="text-xl font-semibold mb-2">
             Global Impact
           </h3>
           <p className="text-gray-700 dark:text-gray-200 mb-4">
