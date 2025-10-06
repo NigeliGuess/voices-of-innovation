@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import artwork from "./assets/artwork.jpg"; // ✅ Import the artwork image
+import artwork from "./assets/artwork.jpg";
 
 export default function App() {
   const [tab, setTab] = useState("home");
@@ -11,26 +11,39 @@ export default function App() {
   const [shareOpen, setShareOpen] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // ✅ Load saved theme
   useEffect(() => {
     const savedTheme = localStorage.getItem("darkMode") === "true";
     setDarkMode(savedTheme);
   }, []);
 
-  useEffect(() => {
+  // ✅ Fetch function (so we can reuse it for auto-refresh)
+  const fetchEpisodes = () => {
     fetch(
-      "https://api.rss2json.com/v1/api.json?rss_url=https://anchor.fm/s/106116398/podcast/rss"
+      "https://podcast-api.netlify.app/api?url=https://anchor.fm/s/106116398/podcast/rss"
     )
       .then((res) => res.json())
       .then((data) => {
-        setEpisodes(data.items);
+        const sorted = data.items.sort(
+          (a, b) => new Date(b.pubDate) - new Date(a.pubDate)
+        );
+        setEpisodes(sorted);
         setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Error fetching episodes:", err);
         setLoading(false);
       });
+  };
+
+  // ✅ Fetch once on mount + auto-refresh every 3 hours
+  useEffect(() => {
+    fetchEpisodes();
+    const interval = setInterval(fetchEpisodes, 3 * 60 * 60 * 1000); // 3 hours
+    return () => clearInterval(interval);
   }, []);
 
+  // ✅ Dark mode persistence
   useEffect(() => {
     document.body.className = darkMode
       ? "bg-gray-900 text-white"
@@ -38,6 +51,7 @@ export default function App() {
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
+  // ✅ Close share menu when clicking outside
   useEffect(() => {
     const handleClickOutside = () => setShareOpen(null);
     document.addEventListener("click", handleClickOutside);
@@ -46,11 +60,21 @@ export default function App() {
 
   if (loading) return <p className="text-center mt-10">Loading episodes...</p>;
 
-  const featuredEpisode = episodes[0];
-  const filteredEpisodes = episodes
-    .slice(1)
-    .filter((ep) => ep.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  // ✅ Filter episodes by title OR description
+  const filteredEpisodes = episodes.filter(
+    (ep) =>
+      ep.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ep.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
+  // ✅ Make links in episode descriptions clickable
+  const makeLinksClickable = (html) =>
+    html.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" class="text-indigo-500 underline">$1</a>'
+    );
+
+  // ✅ Share dropdown menu
   const shareMenu = (title, link, id) => (
     <div className="relative inline-block" onClick={(e) => e.stopPropagation()}>
       <button
@@ -68,61 +92,53 @@ export default function App() {
       </button>
       {shareOpen === id && (
         <div className="absolute mt-2 w-44 bg-white dark:bg-gray-800 shadow-lg rounded z-50 animate-slideDown">
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
-              title
-            )}&url=${encodeURIComponent(link)}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setShareOpen(null)}
-            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            Twitter
-          </a>
-          <a
-            href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-              title + " " + link
-            )}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setShareOpen(null)}
-            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            WhatsApp
-          </a>
-          <a
-            href={`sms:?body=${encodeURIComponent(title + " " + link)}`}
-            onClick={() => setShareOpen(null)}
-            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            Messages
-          </a>
-          <a
-            href={`https://www.snapchat.com/submit?url=${encodeURIComponent(
-              link
-            )}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setShareOpen(null)}
-            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            Snapchat
-          </a>
-          <a
-            href={`https://www.tiktok.com/share/video?url=${encodeURIComponent(
-              link
-            )}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => setShareOpen(null)}
-            className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            TikTok
-          </a>
+          {[
+            {
+              name: "Twitter",
+              url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                title
+              )}&url=${encodeURIComponent(link)}`,
+            },
+            {
+              name: "WhatsApp",
+              url: `https://api.whatsapp.com/send?text=${encodeURIComponent(
+                title + " " + link
+              )}`,
+            },
+            {
+              name: "Messages",
+              url: `sms:?body=${encodeURIComponent(title + " " + link)}`,
+            },
+            {
+              name: "Snapchat",
+              url: `https://www.snapchat.com/submit?url=${encodeURIComponent(
+                link
+              )}`,
+            },
+            {
+              name: "TikTok",
+              url: `https://www.tiktok.com/share/video?url=${encodeURIComponent(
+                link
+              )}`,
+            },
+          ].map((item) => (
+            <a
+              key={item.name}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setShareOpen(null)}
+              className="block px-4 py-2 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              {item.name}
+            </a>
+          ))}
         </div>
       )}
     </div>
   );
+
+  const featuredEpisode = episodes[0];
 
   return (
     <div
@@ -130,10 +146,10 @@ export default function App() {
         darkMode ? "bg-gray-900 text-white" : "bg-gray-50 text-black"
       }`}
     >
-      {/* Sticky Header */}
+      {/* Header */}
       <header className="mb-6 text-center sticky top-0 bg-gray-50 dark:bg-gray-900 z-20 p-4">
         <img
-          src={artwork} // ✅ Uses imported image
+          src={artwork}
           alt="Voices of Innovation Podcast"
           className="mx-auto w-32 h-32 rounded-full shadow-lg mb-4"
         />
@@ -141,36 +157,19 @@ export default function App() {
           Voices of Innovation
         </h1>
         <nav className="mt-4 flex justify-center gap-4 flex-wrap">
-          <button
-            className={`px-4 py-2 rounded ${
-              tab === "home"
-                ? "bg-indigo-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700"
-            }`}
-            onClick={() => setTab("home")}
-          >
-            Home
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${
-              tab === "episodes"
-                ? "bg-indigo-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700"
-            }`}
-            onClick={() => setTab("episodes")}
-          >
-            Episodes
-          </button>
-          <button
-            className={`px-4 py-2 rounded ${
-              tab === "about"
-                ? "bg-indigo-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700"
-            }`}
-            onClick={() => setTab("about")}
-          >
-            About
-          </button>
+          {["home", "episodes", "about"].map((t) => (
+            <button
+              key={t}
+              className={`px-4 py-2 rounded ${
+                tab === t
+                  ? "bg-indigo-500 text-white"
+                  : "bg-gray-200 dark:bg-gray-700"
+              }`}
+              onClick={() => setTab(t)}
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
           <button
             className="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700"
             onClick={() => setDarkMode(!darkMode)}
@@ -180,12 +179,12 @@ export default function App() {
         </nav>
       </header>
 
-      {/* Featured Episode */}
+      {/* Home / Featured Episode */}
       {tab === "home" && featuredEpisode && (
         <div className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow dark:bg-gray-800 mb-6">
           <div className="flex items-center gap-4 mb-4">
             <img
-              src={artwork} // ✅ Uses imported image
+              src={artwork}
               alt="Voices of Innovation Podcast"
               className="w-24 h-24 rounded-lg shadow-md"
             />
@@ -197,7 +196,7 @@ export default function App() {
           <div
             className="prose prose-indigo dark:prose-invert text-gray-700 dark:text-gray-200 mb-4"
             dangerouslySetInnerHTML={{
-              __html: featuredEpisode.description,
+              __html: makeLinksClickable(featuredEpisode.description),
             }}
           ></div>
           {featuredEpisode.enclosure?.link && (
@@ -210,30 +209,6 @@ export default function App() {
             </audio>
           )}
           <div className="flex gap-2 flex-wrap">
-            <a
-              href={featuredEpisode.link}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-            >
-              Anchor
-            </a>
-            <a
-              href="https://open.spotify.com/show/6hhUYtqrHxeRyiilyGXheN?si=132e0d0863c64eeb"
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Spotify
-            </a>
-            <a
-              href="https://podcasts.apple.com/us/podcast/voices-of-innovation/id1825443856"
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1 bg-gray-900 text-white rounded hover:bg-gray-800"
-            >
-              Apple Podcasts
-            </a>
             {shareMenu(featuredEpisode.title, featuredEpisode.link, 0)}
           </div>
         </div>
@@ -244,7 +219,7 @@ export default function App() {
         <div className="max-w-3xl mx-auto mb-4">
           <input
             type="text"
-            placeholder="Search episodes..."
+            placeholder="Search by title or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="border rounded px-3 py-2 w-full dark:bg-gray-700 dark:text-white"
@@ -252,7 +227,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Episodes Grid */}
+      {/* Episodes */}
       {tab === "episodes" && (
         <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {filteredEpisodes.map((ep, i) => (
@@ -261,7 +236,7 @@ export default function App() {
               className="p-6 bg-white rounded-2xl shadow hover:shadow-xl transition transform hover:scale-105 dark:bg-gray-800"
             >
               <img
-                src={artwork} // ✅ Uses imported image
+                src={artwork}
                 alt="Voices of Innovation Podcast"
                 className="w-24 h-24 rounded-lg shadow-md mb-2"
               />
@@ -270,10 +245,11 @@ export default function App() {
               <div
                 className="mt-3 text-gray-700 dark:text-gray-200 text-sm prose prose-indigo dark:prose-invert"
                 dangerouslySetInnerHTML={{
-                  __html:
+                  __html: makeLinksClickable(
                     expanded === i
                       ? ep.description
-                      : (ep.description || "").slice(0, 200) + "...",
+                      : (ep.description || "").slice(0, 200) + "..."
+                  ),
                 }}
               ></div>
               {ep.description && ep.description.length > 200 && (
@@ -301,59 +277,19 @@ export default function App() {
         </div>
       )}
 
-      {/* About Tab */}
+      {/* About */}
       {tab === "about" && (
         <div className="max-w-2xl mx-auto mt-6 bg-white p-6 rounded-2xl shadow dark:bg-gray-800">
           <h2 className="text-2xl font-bold mb-4">About Voices of Innovation</h2>
           <p className="text-gray-700 dark:text-gray-200 mb-4">
-            Voices of Innovation is a youth-led media platform that amplifies
-            young, bold, African-led solutions from changemakers and innovators
-            focusing on the world’s most pressing issues—from climate change,
-            social inequality to education and grassroots innovation.
+            Voices of Innovation amplifies African-led solutions from young
+            changemakers tackling the world’s most pressing issues — from
+            climate change and education to social innovation.
           </p>
-          <h3 className="text-xl font-semibold mb-2">Our Mission</h3>
-          <p className="text-gray-700 dark:text-gray-200 mb-4">
-            Our aim is to build a community of listeners, thinkers, and doers
-            who believe that innovation isn’t just about technology—it’s also
-            about courage, culture, creativity, and passion to make an impact.
-          </p>
-          <h3 className="text-xl font-semibold mb-2">Our Vision</h3>
-          <p className="text-gray-700 dark:text-gray-200 mb-4">
-            By focusing on solutions aligned with the Sustainable Development
-            Goals—SDG 13 (Climate Action), SDG 9 (Innovation), SDG 4 (Education),
-            and SDG 10 (Reduced Inequalities)—Voices of Innovation bridges youth-led
-            action and global policy conversations.
-          </p>
-          <h3 className="text-xl font-semibold mb-2">Global Impact</h3>
-          <p className="text-gray-700 dark:text-gray-200 mb-4">
-            We’re not just telling stories—we’re shifting narratives, building
-            networks, and making room for African youth to be seen, heard, and
-            supported.
-          </p>
-          <div className="flex gap-2 mt-4">
-            <a
-              href="https://open.spotify.com/show/6hhUYtqrHxeRyiilyGXheN?si=132e0d0863c64eeb"
-              className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Spotify
-            </a>
-            <a
-              href="https://podcasts.apple.com/us/podcast/voices-of-innovation/id1825443856"
-              className="px-3 py-1 bg-gray-900 text-white rounded hover:bg-gray-800"
-            >
-              Apple Podcasts
-            </a>
-            <a
-              href="https://anchor.fm/s/106116398/podcast/rss"
-              className="px-3 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
-            >
-              Anchor
-            </a>
-          </div>
         </div>
       )}
 
-      {/* Sticky Audio Player */}
+      {/* Audio Player */}
       {currentAudio && (
         <div className="fixed bottom-0 left-0 right-0 bg-indigo-600 text-white flex justify-between items-center px-4 py-2">
           <span>🎧 Now Playing: {currentAudio}</span>
