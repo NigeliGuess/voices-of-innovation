@@ -2,7 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Your custom animation styles */
+/* Smooth background gradient */
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-flow {
+  background: linear-gradient(-45deg, #667eea, #764ba2, #6b73ff, #000dff);
+  background-size: 300% 300%;
+  animation: gradient-flow 15s ease infinite;
+}
+
+/* Optional subtle fade-in for elements */
 @keyframes slideDown {
   0% { opacity: 0; transform: translateY(-5px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -10,4 +23,16 @@
 
 .animate-slideDown {
   animation: slideDown 0.2s ease-out forwards;
+}
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(99, 102, 241, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
 }
